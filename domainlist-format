@@ -1,0 +1,12 @@
+#
+#
+#-     -           -       warningExpiry
+domain TLDwhoisServer emailto 14,7,3
+or
+domain - emailto 14,7,3
+
+# Rick's suggestion
+domain TLDwhoisServer emailto whoisclientutility 14,7,3
+
+# Maybe 
+domain TLDwhoisServer 14,7,3

@@ -1,0 +1,120 @@
+www.bg                 whois.register.bg
+nic.ag                 whois.nic.ag
+anticipationsf.ca      whois.cira.ca
+enom.cc                whois.nic.cc
+# STALLS - Appears not to be giving expiration date. As of 2015-02-12
+#nic.cd                 whois.nic.cd  #Needs rate-limiting.
+nic.ci                 www.nic.ci
+news.cn                whois.cnnic.net.cn
+nic.cx                 whois.nic.cx
+nic.cz                 whois.nic.cz
+nic.dk                 whois.dk-hostmaster.dk
+ficora.fi              whois.ficora.fi
+nic.gi                 whois2.afilias-grs.net
+#nic.gs                 whois.nic.gs   Expire date in 2038 breaks the date routines.
+registry.gy            whois.registry.gy
+news.hk                whois.hkirc.hk
+#news.hm                whois.registry.hm  #whois.registry.hm isn't responding a/o 2015-02.
+rds.hn                 whois.nic.hn
+nic.ie                 whois.domainregistry.ie 
+icon.org.il            whois.isoc.org.il
+fsf.org.in             whois.inregistry.net
+nic.is                 whois.isnic.is
+nic.it                 whois.nic.it
+nic.jp                 whois.jprs.jp
+kenic.or.ke            whois.kenic.or.ke
+nic.ki                 whois.nic.ki
+#kcna.kp                whois.kcce.kp  #North Korea's whois server vanished - shocker!
+kisa.or.kr             whois.nic.or.kr
+nic.la                 whois.nic.la
+brief.ly               whois.nic.ly
+nic.mu                 whois.nic.mu
+mynic.net.my           whois.mynic.net.my
+tv.nu                  whois.nic.nu 
+dnc.org.nz             whois.srs.net.nz
+#lisboa.pt              whois.dns.pt    domain-check cannot parse this date a/o v. 4.4.
+nic.ru                 whois.ripn.net 
+nic.sc                 whois2.afilias-grs.net
+nic.se                 whois.iis.se
+nic.sg                 whois.nic.net.sg 
+nic.sk                 whois.sk-nic.sk
+nic.su                 whois.ripn.net
+dot.tk                 whois.dot.tk
+nic.tl                 whois.nic.tl
+metu.edu.tr            whois.nic.tr
+#nic.tv                 whois.nic.tv   Expire date in 2050 breaks the date routines.
+twnic.net.tw           whois.twnic.net.tw
+eastercon.org.uk       whois.nic.uk 
+worldcon.org.uk        whois.nic.uk 
+weisler-saratoga-ca.us whois.nic.us
+baho.uz                whois.cctld.uz
+nic.vc                 whois2.afilias-grs.net
+
+nic.aero               whois.aero
+
+nic.biz                whois.biz
+
+nic.cat                whois.cat
+
+boston-baden.com       whois.verisign-grs.com
+conrunner.com          whois.verisign-grs.com
+dnull.com              whois.verisign-grs.com
+drewb.com              whois.verisign-grs.com
+flygirl.com            whois.verisign-grs.com
+hematite.com           whois.verisign-grs.com
+imat.com               whois.verisign-grs.com
+improb.com             whois.verisign-grs.com
+jsd.com                whois.verisign-grs.com
+jxh.com                whois.verisign-grs.com
+keplers.com            whois.verisign-grs.com
+linuxmafia.com         whois.verisign-grs.com
+linuxwisdom.com        whois.verisign-grs.com
+monty-doyle.com        whois.verisign-grs.com
+pentaclemoon.com       whois.verisign-grs.com
+pervasivenetwerks.com  whois.verisign-grs.com
+randometry.com         whois.verisign-grs.com
+schneier.com           whois.verisign-grs.com
+svlug.com              whois.verisign-grs.com
+thyrsus.com            whois.verisign-grs.com
+wccbc.com              whois.verisign-grs.com
+webl.com               whois.verisign-grs.com
+
+rei.coop               whois.nic.coop
+
+educause.edu           whois.educause.net
+
+dragaera.info          whois.afilias.net
+wiscon.info            whois.afilias.net
+
+nic.jobs               jobswhois.verisign-grs.com
+
+nic.mobi               whois.dotmobiregistry.net
+
+nic.museum             whois.museum
+
+baypiggies.net         whois.verisign-grs.com
+conrunner.net          whois.verisign-grs.com
+dd-b.net               whois.verisign-grs.com
+deirdre.net            whois.verisign-grs.com
+extragalactic.net      whois.verisign-grs.com
+groklaw.net            whois.verisign-grs.com
+landley.net            whois.verisign-grs.com
+linuxdojo.net          whois.verisign-grs.com
+lwn.net                whois.verisign-grs.com
+ntk.net                whois.verisign-grs.com
+phosphor.net           whois.verisign-grs.com
+primate.net            whois.verisign-grs.com
+svlug.net              whois.verisign-grs.com
+technocrat.net         whois.verisign-grs.com
+tetro.net              whois.verisign-grs.com
+theinquirer.net        whois.verisign-grs.com
+unixmercenary.net      whois.verisign-grs.com
+zork.net               whois.verisign-grs.com
+zwilnik.net            whois.verisign-grs.com
+
+nic.org                whois.pir.org
+
+nic.pro                whois.registrypro.pro
+
+travel.travel          whois.nic.travel
+

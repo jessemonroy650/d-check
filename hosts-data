@@ -1,0 +1,39 @@
+#org whois.pir.org
+#net whois.verisign-grs.com
+#com whois.verisign-grs.com
+svlug.org	
+svlug.net
+#bsdmasterindex.com whois.verisign-grs.com jesse650@gmail.com
+bsdmasterindex.com whois.verisign-grs.com
+#
+#digits.co whois.nic.co THIS IS FAILING
+digits.co
+# Below responded with: 'This server can not answer queries for that zone.'
+#push.io whois.nic.io
+# Below responded with: 'Query is invalid:'
+#stanford.edu whois.educause.net
+stanford.edu
+# Below responded with: '-7: %Invalid pattern'
+#ping.eu whois.eu
+# now failing 2015-02-08
+#whitehouse.gov whois.nic.gov
+warsonline.info whois.afilias.info
+# now failing 2015-02-08
+#marines.mil whois.nic.mil
+# This will return 'Not found'
+#linuxrebel.us whois.nic.us
+baypiggies.net
+svlug.com
+sf-lug.com
+sf-lug.org
+bafug.org
+balug.org
+baylisa.org
+buug.org
+cocoaheads.org
+eblug.org
+lugod.org 
+nblug.org
+penlug.org
+saclug.org
+socosa.org

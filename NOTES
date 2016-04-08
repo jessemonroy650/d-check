@@ -1,0 +1,48 @@
+= Implementation NOTES on d-check
+Date: 2015-02-14
+
+* ''which''
+* Date Parsing Fatality
+* Croaking (or self termination)
+
+== ''which'' ==
+
+With domain-check (the inspiration for this script), the author seemed to believe there was an issue with locating the ''whois'' utility. While analyzing at the code, it appeared that the author choose a rather elaborate, but guaranteed method. The casual user can be assured, there are several methods to accomplish the task. However, the simpler the solution the hire the possibility of success. As such, the decision was made to go with ''which'' - instead of a more elaborate method.
+
+The remaing question is: ''what does "which" do when it cannot find the whois record?''. 
+After some research, [http://stackoverflow.com/questions/762631/find-out-if-a-command-exists-on-posix-system
+ the following answers] were found.
+
+# ''which'' is not POSIX, but it should return 127, or error
+# The following work arounds were suggested:
+	* ""which whois; echo "${?}" "";
+	* ""collection via backtick (`)"";
+	* ""test for execution ( [ -x )""
+
+== Date Parsing Fatality ==
+
+Date parsing is the heart of this script; it's entire reason for being created and existing. I have not calculated the parsing permutations, but it is large. When a date parsing becomes fatal, it is hoped we have found a ''new date'' string we are unfamiliar with AND as such we can added that to this script.
+
+As such, I am NOT looking for every failure. But instead I start by marking the return values as failed, then the REGEX gets written as precisely as possible with ambigous tokens having extremely limited use. For instance, if a period (.) (the most ambigous REGEX token available) is used, that token is NEVER given an ambigous modifier, such as plus (+) or star (*).
+
+On the subject of parsing permutations the following explanation is tedious, the reader is forewarned. 
+
+Dates and years are usually expressed in numbers, but months can be number, short names (Jul), or full names (July). The field separates (between year, month, and date) can be blank spaces (" "), slashes ("/"), dashes ("-") , periods ("."), and any combination thereof. In addition other "less relevant" information, not logically neccessary, is added for human clarity. As such, these "less relevant" pieces appear as noise in the REGEX expressions, or as boundary markers for the REGEX.
+
+Given the nauseous explaination so far it is worth repeating, ''I start by marking the return values as failed'' and the relative preciseness of the REGEX is expect to "ferret out" date strings that are NON-compliant (or unexpected). Said another way, we pray that the REGEX finds all the date strings we are unfamiliar with; and if it does NOT, then return values pre-marked as 'FAIL' will trigger failure and CROAK the script.
+
+Even with said "hand waiving", there is another threshold to protect the purpose of this script. Just before calculating the number of days remaining until a domain expires, d-check does a range check on the three date fields - year (1-9999) , month (0-11), and date(1-31). If any fields fall out of bounds, the script CROAKs.
+
+== Croaking ==
+
+The following condition will croak (self terminate) the script.
+
+# No domain (-d) or domain list (-F) was given to process.
+# One of the option flags (-d,-F,-s,-r) was given, but did not receive a value.
+# The ''-x'' flag was given without a value.
+# The main support program 'whois' or 'jwhois' was not found.
+# The ''-F'' flag was given a value that is not a file, cannot be read, or cannot be found.
+# The ''whois'' program failed to execute.
+# The date string was not found in the report return by the whois server.
+# One of the fields in the date string is out of range.
+# There is also a failure, if sending email fails. But email is being deprecated.

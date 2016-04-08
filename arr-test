@@ -1,0 +1,49 @@
+#!/usr/bin/perl -ws
+#
+# -s enables rudimentary switch parsing for switches on the command line after (...)
+# -w prints warnings about dubious constructs
+# For detail see: http://perldoc.perl.org/perlrun.html
+##################################
+## Command-line options
+##################################
+# NOTE: Rudimentary commandline parsing is on. See Above.
+# These variables are the values for each invoke command-line option.
+#our ($d, $e, $F, $h, $q, $r, $s, $v, $w, $x, $DEBUG);
+
+my (@domains, @line);
+# Portions borrowed from original, with modifications
+sub getDomains {
+	# Open the file if it exists
+	open F or croak("$F: $!\n");
+	while (<F>){
+		# Skip blank lines
+		next if /^\s*$/;
+		# Ignore comments
+		next if /^\s*#/;
+
+		# Strip preceding and following blanks - http://perlmaven.com/trim
+		$_ =~ s/^\s+|\s+$//g;
+		@line = split;
+		push @domains, [ @line ];
+	}
+	close F;
+}
+
+# Read the domain list file
+if ($F) {
+	if (! -f $F ) {	croak("$F is not a regular file\n"); }
+	if (! -r $F ) { croak("Can't read $F\n"); }
+	&getDomains($F);
+	#$isSingleDomain = 0;
+}
+
+# Comma vs. dot operator
+# http://www.perlmonks.org/?node_id=285604
+my ($host, $nic, $email);
+for (@domains) {
+	($host, $nic, $email) = @{$_};
+	if ($host)  { print $host, "\n";  } else { print "\n"; }
+	if ($nic)   { print $nic, "\n";   } else { print "\n"; }
+	if ($email) { print $email, "\n"; } else { print "\n"; }
+	print "----\n";
+}

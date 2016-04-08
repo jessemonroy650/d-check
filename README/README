@@ -1,0 +1,37 @@
+= README =
+Date: 2015-02-09
+
+'''d-check''' is script to check domain registration expiration via whois.
+
+== USAGE ==
+When calling ~~d-check~~ either the ''-d'' or ''-F'' are required, the other parameters are optional.
+
+~~~~
+d-check [-r=max] [-e=email] [-w] [-v] [-h] <-d=domain_name|-F=domain_list>
+
+  -d=domain        : Domain to analyze
+  -F=domain_list   : File with a list of domains, one per line
+  -r=max_retries   : Change the maximum number of retries (DEFAULT: 3)
+  -e=email_address : Send a warning message by email (DEPRECATED)
+  -w               : Force 'whois' instead of 'jwhois' (some domains need this)
+  -v               : Display current version of this script
+  -h               : Print this message
+  -DEBUG           : Turn on debugging output
+~~~~
+
+d-check was inspired by domain-check (both are perl scripts). It is slightly different that domain-check in that the code has been optimized for readability and maintenance. Another difference is domain-check recognized 16 different ''"date signatures"'', d-check recognizes 29. Several command line utilites assist d-check, they include:
+
+* which
+* jwhois or whois - used to get the whois record
+* mutt, mailx, or sendmail - used to email reports to recipents
+
+When d-check goes to check a record it looks for ''jwhois'' and uses it. If it cannot find it, it uses ''whois''. The command line option ''-w'' can be used to force the use of ''whois''.
+
+(IN TRANSITION) Once a report is ready, whether a single domain or multiple domains, d-check will email the recipient given at the command line, or the recipient in the ''domain_list''. In this task, d-check will look use ''mutt'' (in mailx mode), ''mailx'', or ''sendmail''(1), given preference to any one utility, in that order respectively.
+
+
+== ''domain_list'' File ==
+Given the command line option ''-F=domain_list'', d-check will read the file named ''domain_list'' and expects to see one domain name per line. On this same line, '''two''' (2) additional options can be given, an alternate ''"whois" server'' and a ''recipient@email-address'', where both options are ''required''.
+
+If however, you would like to use the default whois server, then place a dash ''(-)'' in place of the server. If you do not want to use the recipient-email-address field, leave that field blank. (This may change in the future.)
+

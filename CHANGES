@@ -1,0 +1,24 @@
+= Changes to d-check =
+
+d-check is inspired by domain-check, also a perl script. 
+
+
+= For v1.0
+* NOW, parsing for 29 unique REGEX expressions for parsing dates
+* ''-q'' (the quiet option) was never implemented
+* ''-e'' (the email option) is being deprected. The option is currently functional, but largely untested. The option has several issues, besides being gratuitous. 
+	# Currently, D-check needs three (3) CLI programs (which,whois,jwhois) - including an email option adds three (3) more programs to support(mutt,mailx,sendmail).
+	# All three (3) email programs have different flags to issue the same functions.
+	# The largest issue with email is the different security policies.
+	# In the future, the code will remain with implementation notes, but will be unsupported.
+* ''-w'' the force 'whois' binary over jwhois - remains unchanged
+* ''-x'' the days till expiration flag is now global, and is being extended to the domainlist file.
+* ''-DEBUG'' replaces ''-X'' as a debugging option.
+* domains that end with .org or .cd will have a 20 second delay after being called to prevent being black-listed. This feature will change in the future.
+* The author of domain-check noted issues with 'which'. We see minor issues. SEE: NOTES
+* There are FATAL error conditions for ''parsing expiry dates''. Use -DEBUG to resolve issues.
+* The following domains are in the primary date parsing algorithms (.com .net .edu .org .co)
+* The following domains are directly parsed for (.bg .ca .cz .dk .fi .hk .ie .il .is .jp .kr .ly .my .nz .pt .ru .sk .tk .tr .tw .uk .aero .coop .cat .museum)
+
+== STUBBED, but NOT IMPLEMENTED ==
+* ''-s'' the global whois host is being reduce. Currently, it acts as a global 'whois' server, whether doing one domain or a list. The option will be reduce such that it only works only with the ''-d'' or ''-F'' option. That is, when looking at a single domain or a list of domains that all use the same host, you can specify that whois host. Otherwise, the domainlist is the better choice.

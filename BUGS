@@ -1,0 +1,4 @@
+= BUGS =
+Date: 2015-02-14
+
+* 2015-02-14 - The domain .tk (Tokelau, a territory of New Zealand) has ambigous date reporting. Parsing should not be considered reliable for that domain.

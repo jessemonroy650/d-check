@@ -1,0 +1,33 @@
+#site-icon {height:64px;width:64px;float:left;clear:both;}
+#header-text {padding:0.5em;display:inline-block;font-size:x-large;}
+#title {margin:0.25em 2%; font-size:xx-large;font-weight:bold;}
+#subtitle {margin:0.25em 2%; font-size:large;font-weight:bold;}
+.code {white-space:pre;font-family:monospace;font-size:large;margin:0 1.5em;padding:1em 0.5em;background:#eeeeee;overflow:auto;}
+.teletype {white-space:pre;font-family:monospace;font-size:large;background:#eeeeee;}
+.pre {white-space:pre;font-family:monospace;margin:0 1.5em;font-size:large;padding:0 0.5em;background:#eeeeee;overflow:auto;}
+.quote {font-style: italic;margin:0 10%;padding:0.5em;background-color:#FFFFCC;border:black 1px solid;border-radius:0.36em;box-shadow: 10px 10px 5px #888888;}
+.quote_span {font-style: italic;margin:0;padding:0.05em 0.25em;background-color:#FFFFCC;border:black 1px solid;border-radius:0.36em;}
+.hr_centered {width:50%;textAlign:center;}
+.footnotes {white-space:nowrap;font-size:small;margin:0 1.5em;padding:0.5em 0.5em;background:#eeeeee;border:black 1px solid;border-radius:0.1em;overflow:auto;}
+.mobile-phone-only {visibility:collapse;display:none;}
+
+#copyright{margin:0.5em;font-size:x-small;float:right;}
+
+
+/* handles mid-size tablets */
+@media only screen and (min-width:321px) and (max-width:600px) {
+#site-icon {height:64px;width:64px;}
+#header-text {padding:1em;display:inline-block;font-size:x-large;}
+#title {margin:0 1%; font-size:xx-large;font-weight:bold;}
+#subtitle {margin:0 1%; font-size:large;font-weight:bold;}
+.footer-spacer {min-height:20em;}
+}
+
+/* handles the small phones */
+@media (max-width:320px) {
+#site-icon {height:64px;width:64px;}
+#header-text {padding:1em;display:inline-block;font-size:large;}
+#title {margin:0 0.5em 0 0.5em; padding:0; font-size:x-large;font-weight:bold;}
+#subtitle {margin:0 0.5em 0 0.5em; padding:0; font-size:large;font-weight:bold;}
+.mobile-phone-only {visibility:visible;display:block;}
+}

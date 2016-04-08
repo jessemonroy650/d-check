@@ -1,0 +1,73 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=iso-8859-1" />
+	<title>README for d-check</title>
+	<meta name="viewport" content="width=device-width">
+	<meta name="create-date" content="2015-02-24">
+	 
+	<link rel="stylesheet" type="text/css" href=css/default.css>
+	<link rel="stylesheet" type="text/css" href=css/default_docs.css>
+	<style>
+	/* override other unordered list styles */
+	body {padding:0 0.25em;}
+	h1 {padding:0 0.25em;}
+	h2 {padding:0 1em;}
+	#copyright {background-color:#aaaaaa;opacity:0.7;padding:0.2em;}
+	@media only screen and (min-width:321px) and (max-width:600px) {
+		body {padding:0 0.1em;} overflow:scroll;
+	}
+	@media only screen and (max-width:320px) {
+		body {padding:0 0.1em;} overflow:scroll;
+	}
+	</style>
+	<script></script>
+</head>
+<body>
+
+<h1> README </h1>
+Date: 2015-02-09
+<p>
+<b>d-check</b> is script to check domain registration expiration via whois.
+<p>
+<h2> USAGE </h2>
+When calling <span class=teletype>d-check</span> either the <i>-d</i> or <i>-F</i> are required, the other parameters are optional.
+<p>
+<div class=pre>
+d-check [-r=max] [-e=email] [-w] [-v] [-h] <-d=domain_name|-F=domain_list>
+<p>
+  -d=domain        : Domain to analyze
+  -F=domain_list   : File with a list of domains, one per line
+  -r=max_retries   : Change the maximum number of retries (DEFAULT: 3)
+  -e=email_address : Send a warning message by email (DEPRECATED)
+  -w               : Force 'whois' instead of 'jwhois' (some domains need this)
+  -v               : Display current version of this script
+  -h               : Print this message
+  -DEBUG           : Turn on debugging output
+</div>
+<p>
+d-check was inspired by domain-check (both are perl scripts). It is slightly different that domain-check in that the code has been optimized for readability and maintenance. Another difference is domain-check recognized 16 different <i>"date signatures"</i>, d-check recognizes 29. Several command line utilites assist d-check, they include:
+<p>
+<ul>
+<li> which
+<li> jwhois or whois - used to get the whois record
+<li> mutt, mailx, or sendmail - used to email reports to recipents
+</ul>
+<p>
+When d-check goes to check a record it looks for <i>jwhois</i> and uses it. If it cannot find it, it uses <i>whois</i>. The command line option <i>-w</i> can be used to force the use of <i>whois</i>.
+<p>
+(IN TRANSITION) Once a report is ready, whether a single domain or multiple domains, d-check will email the recipient given at the command line, or the recipient in the <i>domain_list</i>. In this task, d-check will look use <i>mutt</i> (in mailx mode), <i>mailx</i>, or <i>sendmail</i>(1), given preference to any one utility, in that order respectively.
+<p>
+<p>
+<h2> <i>domain_list</i> File </h2>
+Given the command line option <i>-F=domain_list</i>, d-check will read the file named <i>domain_list</i> and expects to see one domain name per line. On this same line, <b>two</b> (2) additional options can be given, an alternate <i>"whois" server</i> and a <i>recipient@email-address</i>, where both options are <i>required</i>.
+<p>
+If however, you would like to use the default whois server, then place a dash <i>(-)</i> in place of the server. If you do not want to use the recipient-email-address field, leave that field blank. (This may change in the future.)
+<p>
+<p>&nbsp;<p>&nbsp;<p>
+<div id="footer" class="footer">
+	<span id=copyright>Copyright &copy; 2015 by Jesus Monroy, Jr.</span>
+</div>
+</body>
+</html>
+<!-- 2015-02-09 - This footer is exclusively for d-check. CREATED: 2015-02-24T21:06:29 -->
+

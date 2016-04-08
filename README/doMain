@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+SOURCE=README
+TARGET=README.html
+SCRIPTS="${HOME}/ComputerBusiness/Arduino/DocumentingTheYun/scripts"
+WRAPPERS="${HOME}/ComputerBusiness/Arduino/DocumentingTheYun/wrappers"
+TABLES=""
+CODES=""
+QUOTES=""
+FOOTNOTES="footnotes"
+# These are created and can be destroyed
+TNAME=/tmp/tmp.$$
+
+for X in $TABLES
+do
+	INTERMEDIATE="${INTERMEDIATE} ${X}.html"
+	cat ${X} | ${SCRIPTS}/quikmarkup.tcl > ${TNAME}
+	wt ${TNAME} > ${X}.html
+done
+# ONLY one (1) footnote section per page.
+if [ -e ${FOOTNOTES} ]
+then
+	wt ${FOOTNOTES} > ${TNAME}
+	cat ${TNAME} | ${SCRIPTS}/quikmarkup.tcl > ${FOOTNOTES}.html
+fi
+#
+# Assemble all the pieces
+#
+cp /dev/null ${TARGET}
+cat ${WRAPPERS}/header_docs.html      | ${SCRIPTS}/submarkers.tcl >> ${TARGET}
+wt2	${SOURCE}                               >> ${TARGET}
+cat ${WRAPPERS}/hfooter-dcheck.html | ${SCRIPTS}/submarkers.tcl >> ${TARGET}
+
+# Remove intermediate files
+#if [ -e ${INTERMEDIATE} ]
+#then
+#	rm ${INTERMEDIATE}
+#fi
+
+if [ -e ${TNAME} ]
+then
+	rm ${TNAME}
+fi

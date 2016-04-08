@@ -1,0 +1,683 @@
+#!/usr/bin/perl -ws
+#
+# -s enables rudimentary switch parsing for switches on the command line after (...)
+# -w prints warnings about dubious constructs
+# For detail see: http://perldoc.perl.org/perlrun.html
+##################################
+## Command-line options
+##################################
+# NOTE: Rudimentary commandline parsing is on. See Above.
+# These variables are the values for each invoke command-line option.
+our ($d, $e, $F, $h, $q, $r, $s, $v, $w, $x, $DEBUG);
+
+# Get the program name
+my ($myName) = $0 =~ /([^\/]+)$/;
+# FALLBACK ADDRESS FOR NOTIFICATION #
+my $FROM    = 'report@lenni.bsdmasterindex.com';
+# HARD CODED MAIL
+my $MailProg  = '/usr/sbin/sendmail';
+my $MailParms = "-s ";
+# The -s flag is the only flag in common for
+# sendmail, mailx, and mutt. PITA
+#
+# The -t flag tells sendmail to
+# look for To:, From:, Subject: header lines in the
+# mail message to determine the addresses to send to.
+#
+# The -n flag tells sendmail not to use the alias list
+# for the UNIX server.  We do not want outsiders using
+# the alias list of the webserver in most cases.
+
+=pod
+# Let's use this for something useful
+2015-02-14 v0.9.8
+*	''-x'' option now functional
+2015-02-08 v0.9.7
+*	Completed 'Days Left' with ISO 8061 format, and ALOT of cleanup & documenting.
+2015-02-07 v0.9.6
+*	Added 'Days Left', but got BUG when domain lookup fails (unclear how to reproduce).
+2015-02-06 v0.9.6
+*	Added better support for File format for one record per line - which is: domain nic_server email_to
+2015-02-05 v0.9.5
+*	Alpha
+2015-02-04 v0.8.1
+*	Rewrite
+=cut
+
+##################################
+# STATIC VALUES (Variables)
+##################################
+my $usage =<<"+EoT+";
+Usage: $myName [-r=max] [-e=email] [-w] [-v] [-h] <-d=domain_name|-F=domainfile>
+
+  -d=domain        : Domain to analyze
+  -F=domain_list   : File with a list of domains, one per line
+  -r=max_retries   : Change the maximum number of retries (DEFAULT: 3)
+  -x=days          : Change expiration interval (DEFAULT:30)
+  -e=email_address : Send the Report by email
+  -w               : Force 'whois' instead of 'jwhois' (some domains need this)
+  -v               : Display current version of this script
+  -h               : Print this message
+  -DEBUG           : Turn on debugging output
+
++EoT+
+
+# STUBBED = but NOT IMPLEMENTED
+#  -s=whois server  : Use alternate whois server
+# REMOVED = unlikely to return, or will change
+#  -q               : Don't print to the console
+
+# Lookup list for month number->name conversion
+my (%mth,%mlookup);
+@mth{map sprintf("%02d", $_), 1..12} = qw/jan feb mar apr may jun jul aug sep oct nov dec/;
+# Lookup list for month name->abbrev conversion
+@mlookup{qw/january february march april may june july august september october november december/} =
+	(qw/jan feb mar apr may jun jul aug sep oct nov dec/) x 2;
+my %months;
+@months{qw/jan feb mar apr may jun jul aug sep oct nov dec/} = 0..11;
+
+##################################
+# 
+##################################
+use strict;
+use Time::Local;
+$| = 1; # don't buffer output, but flush immediately
+
+##################################
+# Global Variables
+##################################
+my $max_retries       = $r || 3;  # Set DEFAULT to 3 tries
+my $max_day_expired   = $x || 30; # Set DEFAULT of 30 days.
+my $global_whois_host = $s || ''; # Set DEFAULT to blank ('').
+my $email_report      = $e || ''; # Set DEFAULT to no email
+
+####################### PROCESS COMMAND LINE OPTIONS ###########################
+# Read the version number at the top of the changelog
+if ($v) { reportVersion(); exit(0); }
+# Display the help output if requested or in case of incorrect usage
+if ($h) { reportVersion(); print($usage); exit(0); }
+
+# if no domain or no domain list, die/croak/fail
+if (! $d && ! $F) {
+	croak("\n*ERROR: '$myName' requires either a domain name or a domain list as an argument*\n\n$usage");
+}
+# If we get "-d -F -s" make sure we get a value also. And not just set to one (1).
+# And make sure we get a "retry" decimal value.
+if ((defined $d && $d =~ /^1$/) ||
+	(defined $F && $F =~ /^1$/) || 
+	(defined $s && $s =~ /^1$/) || 
+	(defined $r && $r !~ /^\d+$/)) {
+	croak("\n*ERROR: Please make sure you're using correct syntax (i.e., '-d=domain_name')*\n\n$usage");
+}
+
+# If we get a expiration option, die if not valid.
+# Else set default notification interval to 30 days
+if ($max_day_expired) {
+	if ( $max_day_expired !~ /^\d{1,4}$/ ){
+		croak("Expiration interval must be specified as an integer in days (0-9999).\n");
+	}
+}
+
+##################################
+# Select our helper programs
+##################################
+# Locate 'whois' or (preferred) 'jwhois'
+my ($whois, $jwhois, $mailx, $mutt, $mail);
+# http://perldoc.perl.org/functions/chomp.html
+chomp($whois  = `which whois`);
+chomp($jwhois = `which jwhois`);
+chomp($mailx  = `which mailx`);
+chomp($mutt   = `which mutt`);
+
+# For 'jwhois', Turn off caching, if the debug option is on
+if ($jwhois) { $jwhois .= " -f" if $DEBUG; }
+# For 'whois',  Turn down the noise (minimal output option)
+if ($whois)  { $whois .= " -H"; }
+# select 'jwhois' (preferred) or 'whois'
+$whois = ($jwhois) ? $jwhois : $whois;
+# Force 'whois', if requested
+$whois = ($w) ? "/usr/bin/whois" : $whois;
+
+croak("'whois'|'jwhois' not found in path.\n") unless $whois;
+
+# Switch Mutt into 'mailx' mode if found, else use mailx
+$mail      = ($mutt)   ? ($mutt .= " -x") : $mailx;
+# if none found, use /usr/sbin/sendmail by default
+$MailProg  = (! $mail) ? $MailProg : $mail;
+
+#croak("'mailx'|'mutt' not found in path.\n") unless $mail;
+
+if ($DEBUG) {
+	print "whois is: " . $whois . "\n";
+	print "mail  is: " . $mail ."\n";
+}
+
+##################################
+# Read the Domain List File
+##################################
+my @domains;
+if ($F) {
+	if (! -f $F ) {	croak("$F is not a regular file\n"); }
+	if (! -r $F ) { croak("Can't read $F\n"); }
+	getDomains($F);
+}
+
+# Having a '-F' AND a '-d' is explicitly not excluded
+# So, append the domain requested to the end of the list.
+if ($d){
+	# The stripping of extra characters seems useless.
+	# Strip leading URI method 
+	#$d =~ s/^.*:\/\///;
+	# and any terminal '/'s
+	#$d =~ s/\/$//;
+	push @domains, [ $d ];
+}
+
+################################################################################
+my $header = sprintf "\n\n%-24s%-36s%s\n%s\n", "Host", "Registrar", "Exp.date/Days left", "=" x 78;
+# If we are not emailing this, print it.
+if (! $email_report) {
+	print $header;
+}
+########################## DATA PROCESSING SECTION #############################
+# Process the domain list
+my $domainExpireRegistrar;
+my $domainExpireYear;
+my $domainExpireMonth;
+my $domainExpireMonthNumber;
+my $domainExpireDate;
+
+my $line;
+my ($host, $server, $email);
+my $opt;
+my @out;
+my $shortRegistrar;
+my $mydata;
+my $diff;
+my $iso8061date;
+my $shortReport;
+my ($domainExpireMonthforRemain, $domainExpireDateforRemain);
+#
+for $line (@domains) {
+	# formerly: $host = $line;
+	($host, $server, $email) = ('-','-','-');
+	($host, $server, $email) = @{$line};
+	# check for uninitialized variables before 
+	if ($server) {
+		$opt   = ($server eq '-') ? "" : (($server) ? "-h $server" : "");
+	} else {$server = ''; $opt = '';}
+	if ($email) {
+		$email = ($email  eq '-') ? "" : $email;
+	} else {$server = '';}
+
+	if ($DEBUG) {
+		print "Processing $host via ";
+		($server) ? print "$server" : print  "default";
+		print " ...\n";
+	}
+
+	######################
+	## whois Lookup     ##
+	######################
+	@out = doWhois($whois, $opt, $host, $max_retries, @out);
+
+	######################
+	## Registrar Lookup ##
+	######################
+	$domainExpireRegistrar = getRegistrar(@out);
+
+	if ($DEBUG) { print "parsing for date\n"; }
+	#####################
+	## Expiry Date Lookup
+	#####################
+	($domainExpireYear, $domainExpireMonth, $domainExpireDate)  = getExpiryDate(@out);
+	if ($DEBUG) {
+		print $domainExpireRegistrar, " -d=", $host, " -s=", $server,"\n";
+		print $domainExpireYear . "\n";
+		print $domainExpireMonth . "\n";
+		print $domainExpireDate . "\n";
+	}
+	#
+	# IF the date parse failed, FAIL/croak/die
+	#
+	if ($domainExpireYear eq 'FAIL') { 
+		if ($DEBUG) { print "No regexes matched.\n"; };
+		# Comment out the line below, if you must. email me your domain with the issue.
+		if (! $DEBUG) { croak("Date parse failed for domain: $host\n"); }
+		# fix warnings
+		$domainExpireYear = 0;
+		$domainExpireMonthNumber = 0;
+		$diff = 0;
+	} else {
+		#####################
+		## Calculate Days Remaining
+		#####################
+		# SPECIAL NOTE: When PERL calculates time, the month field is the only odd ball.
+		# The month field has the index starting at zero (0), not one (1).
+		# All other fields do NOT have this quirk.
+		# http://perldoc.perl.org/Time/Local.html
+		$domainExpireMonthforRemain = 
+			($domainExpireMonth =~ /^\d+$/) ?
+				$domainExpireMonth - 1 : 
+				makeSureMonthIsNumber($domainExpireMonth);
+		# We reset for printing purposes ONLY
+		$domainExpireMonthNumber    = $domainExpireMonthforRemain + 1;
+
+		###XXX###XXX###XXX###
+		# self-terminate, if numbers are outside of the range of timegm()
+		###XXX###XXX###XXX###
+		if ($domainExpireDate < 1 || $domainExpireDate > 31) {
+			croak("$host had \$domainExpireDate=$domainExpireDate\n");
+		}
+		if ($domainExpireMonthforRemain < 0 || $domainExpireMonthforRemain > 11) {
+			croak("$host had \$domainExpireMonthforRemain=$domainExpireMonthforRemain\n");
+		}
+		if ($domainExpireYear < 1 || $domainExpireYear > 9999) {
+			croak("$host had \$domainExpireYear=$domainExpireYear\n");
+		}
+		#####################
+		# finally, get the days remaining until registration expires.
+		#####################
+		$diff = getDaysRemaining($domainExpireYear, $domainExpireMonthforRemain, $domainExpireDate);
+	}
+
+	#####################
+	## Assemble Report ##
+	#####################
+	# Truncate string longer than 35 characters
+	$shortRegistrar = substr($domainExpireRegistrar, 0, 35);
+	# Assemble date into ISO8061 format
+	$iso8061date    = sprintf("%04d%s%02d%s%02d", $domainExpireYear, '-', $domainExpireMonthNumber, '-', $domainExpireDate);
+	# Assemble all sub-strings into a report
+	$shortReport    = sprintf("%-24s%-36s%-12s/%5s\n", $host, $shortRegistrar, $iso8061date, $diff);
+	#
+	# Add currect section to report ONLY if <= $max_day_expired
+	#
+	if ($diff <= $max_day_expired) {
+		# if an email given, collect report, else output line.
+		if ($email_report) {
+			$mydata        .= $shortReport;
+		} else {
+			print $shortReport;
+		}
+		# Send individual record to person on line.
+		if ($email) { sendmail('d-check report', $header . $shortReport, $FROM, $email); }
+	}
+}
+# email or print the report
+if ($email_report) {
+	sendmail('d-check report', $header . $mydata, $FROM, $email_report);
+}
+
+exit 0;
+
+##################################
+# Subroutines
+##################################
+#
+# Lifted directly from original, with slight revision. ;-)
+#
+sub reportVersion {
+	seek DATA, 0, 0;
+	while (<DATA>){
+		if (m[^\d+-\d+-\d+[^v]+v([0-9.]+)]){
+			print "Version: $1\nCopyright (C) 2015 Jesse Monroy <jessemonroy650\@yahoo.com>\n\n";
+			return;
+		}
+	}
+}
+#
+#	shorthand
+#
+sub croak {
+	die $_[0];
+}
+#
+#	reads file (given) ignoring blank lines and comments
+#	returns an array with one line per record
+#	Portions borrowed from original, with modifications
+sub getDomains {
+	my @line;
+	# Open the file if it exists
+	open F or croak("$F: $!\n");
+	while (<F>){
+		# Skip blank lines
+		next if /^\s*$/;
+		# Ignore comments
+		next if /^\s*#/;
+
+		# Strip preceding and following blanks - http://perlmaven.com/trim
+		$_ =~ s/^\s+|\s+$//g;
+		# formerly: push @domains, $_;
+		@line = split;
+		push @domains, [ @line ];
+	}
+	close F;
+}
+#
+#	issue the command line program 'whois' to get host record
+#
+sub doWhois {
+	my ($w, $o, $h, $maxr, @out) = @_;
+	my $retries = 0;
+	my $done    = 0;
+	# Start the 'retry' block
+	while (! $done && ($retries <= $maxr)) {
+
+		#############################################
+		# Execute the query, save as a single array
+		#############################################
+		open Who, "$w $o $h|" or croak("Error executing $w: $!\n");
+		@out = <Who>;
+		close Who;
+		#
+		if ($DEBUG) { if ($out[0]) {print "$out[0]";} else {print "nothing yet for $h\n";} }	
+		if (@out){
+			# if the word 'domain' can be found, consider it success.
+			# grep will return how man times it found the word.
+			$done = grep(/domain/i, @out);
+		} else {
+			$retries++;
+			# Some registrar are known to black-list IP numbers for requesting to quickly.
+			if ($h =~ /\.org$/i) {sleep 20;}
+			if ($h =~ /\.cd$/i)  {sleep 20;}
+		}
+		if ($DEBUG) {print "retries=" . $retries, ", done=", $done, "\n";}
+	} # End of retry block
+	# if we found the word 'domain' return the array, else return an empty array.
+	return ($done) ? @out : ();
+}
+#
+#
+#
+sub getRegistrar {
+	my @o = @_;
+	my $registrar = '***REGISTRAR FAIL***';
+	for (@o) { 
+		if (/registrar:\s*(.+)/i) { $registrar  = $1;}
+	}
+	return $registrar;
+}
+#
+#	Scans the array of lines (given) for the unique date string
+#	NOTE: On parsing, I've tried to maintain a regular order.
+#	All REGEX expression should be case insensitive. '/i'
+#   All literal strings are in case expected, even though it does not matter.
+#	The REGEX sets are simplified, even thought some can be shortened.
+#
+sub getExpiryDate {
+	my (@o) = @_;
+	my ($exYear, $exMonth, $exDate) = ('FAIL', 0 , 0);
+	for (@o) {
+		#   'Expiration Date: 28-dec-2014'
+		if (/Expiration Date:\s*([0-9]{2})-([a-z]{3})-([0-9]{4})/i){
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Domain expires:             31-Jul-2015' (.edu)
+		if (/Domain expires:\s*([0-9]{2})-([a-z]{3})-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+        #   'Registry Expiry Date: 2015-11-20T23:59:59.0Z' (.la)
+		#   'Registry Expiry Date: 2016-08-06T04:00:00Z' (.org)
+		if (/Registry Expiry Date:\s*([0-9]{4})-([0-9]{2})-([0-9]{2})T/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		# This is ugly because the years is way out on the right.
+		#   'Domain Expiration Date:\s*Tue Jun 28 23:59:59 GMT 2016' (.co)
+		if (/Domain Expiration Date:\s*[a-z]{3}\s+([a-z]{3})\s+([0-9]{2})\s+[0-9:]{8}\s+[a-z]{3}\s+([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $1;
+			$exDate  = $2;
+		}
+		#   'expires at: 14/01/2016 00:00:00 EET' (.bg) - ASSUME month given test on 2015-02-11
+		if (/expires at:\s*([0-9]{2})\/([0-9]{2})\/([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expiry date:           2016/09/15' (.ca)
+		if (/Expiry date:\s*([0-9]{4})\/([0-9]{2})\/([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		# 'expire:       15.03.2017' (.cz)
+		if (/expire:\s*([0-9]{2})\.([0-9]{2})\.([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expires:              2017-06-30' (.dk)
+		if (/Expires:\s*([0-9]{4})-([0-9]{2})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'expires:  31.8.2017' (.fi)
+		if (/expires:\s*([1-3][0-9])\.([0-9]{1,2})\.([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expiry Date: 14-05-2018' (.hk)
+		if (/Expiry Date:\s*([0-9]{2})-([0-9]{2})-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'renewal:      11-April-2015' (.ie)
+		if (/renewal:\s*([0-9]{2})-([a-z]+)-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'validity:     24-01-2017' (.il)
+		if (/validity:\s*([0-9]{2})-([0-9]{2})-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'expires:      September  5 2015' (.is)
+		if (/expires:\s*([a-z]+)\s+([0-9]{1,2})\s+([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $1;
+			$exDate  = $2;
+		}
+		#   'Expire Date:        2015-12-31' (.it)
+		if (/Expire Date:\s*([0-9]{4})-([0-9]{1,2})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#    '[Expires on]                    2015/07/31' (.jp)
+		if (/\[Expires on\]\s*([0-9]{4})\/([0-9]{1,2})\/([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Expiration Date             : 9999. 12. 31.' (.kr) # Apparently very optomistic.
+		if (/Expiration Date\s+:\s*([0-9]{4})\. ([0-9]{2})\. ([0-9]{2})/i){
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Expired: 2018-06-16 11:24:33' (.ly)
+		if (/Expired:\s*([0-9]{4})-([0-9]{2})-([0-9]{2})/i){
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#  'd [Record Expired]              01-MAR-2017' (.my)
+		if (/\[Record Expired\]\s*([0-9]{2})-([a-z]{3})-([0-9]{4})/i){
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		# 'domain_datebilleduntil: 2015-02-23T00:00:00+13:00' (.nz)
+		if (/domain_datebilleduntil:\s*([0-9]{4})-([0-9]{2})-([0-9]{2})T/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Expiration Date (dd/mm/yyyy): 27/02/2015' (.pt)
+		if (/Expiration Date .{12}:\s*([0-9]{2})\/([0-9]{2})\/([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'paid-till:     2015.12.01'  (.ru)
+		if (/paid-till:\s*([0-9]{4})\.([0-9]{2})\.([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Valid-date          2015-09-29' (.sk)
+		if (/Valid-date\s*([0-9]{4})-([0-9]{2})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Record will expire on: 01/01/2025' (.tk)
+		if (/Record will expire on:\s*([0-9]{2})\/([0-9]{2})\/([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expires on..............: 2015-Mar-10' (.tr)
+		if (/Expires on\.+:\s*([0-9]{4})-([a-z]{3})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Record expires on 2024-04-21 (YYYY-MM-DD)' (.tw)
+		if (/Record expires on\s*([0-9]{4})-([0-9]{2})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+		#   'Expiry date:  11-Nov-2016' (.uk)
+		if (/Expiry date:\s*([0-9]{2})-([a-z]{3})-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expires On:08-Mar-2015 13:26:29 UTC' (.aero)
+		if (/Expires On:\s*([0-9]{2})-([a-z]{3})-([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+		#   'Expiry Date:             06 Mar 2018 21:08:58 UTC' (.coop)
+		if (/Expiry Date:\s*([0-9]{2}) ([a-z]{3}) ([0-9]{4})/i) {
+			$exYear  = $3;
+			$exMonth = $2;
+			$exDate  = $1;
+		}
+
+		#   'Expiration Date: 2015-05-05 15:16:56 GMT' (.cat)
+		#   'Expiration Date: 2015-02-04 19:19:09 GMT' (.museum)
+		if (/Expiration Date:\s*([0-9]{4})-([0-9]{2})-([0-9]{2})/i) {
+			$exYear  = $1;
+			$exMonth = $2;
+			$exDate  = $3;
+		}
+
+
+	}
+	#print $exYear, "\n", $exMonth, "\n", $exDate, "\n";
+	return ($exYear, $exMonth, $exDate);
+}
+#
+#	returns a number (0..11), if input was a month (in letters)
+#
+sub makeSureMonthIsNumber {
+	my ($m) = @_;
+	my $mNumber = 0;
+	# If there are no numbers, do table lookup
+	if ($m !~ /\d+/) {
+		if (length $m == 3) {
+			# convert string to lower case before doing lookup
+			$mNumber = $months{lc $m}
+		} else {
+			# convert month (long) to month (3-letter) to number (0.11)
+			$mNumber = $months{$mlookup{lc $m}}
+		}
+	}
+	if ($DEBUG) {
+		if ($mNumber) {
+			print "lookup makeSureMonthIsNumber()=", $mNumber, "\n";
+		} else {
+			print "lookup makeSureMonthIsNumber()=FAILED\n";
+		}
+	}
+
+	return $mNumber;
+}
+#
+#	return number of days from now until date given (input)
+# 	http://perldoc.perl.org/Time/Local.html
+# 	NOTE: timegm() works just like localtime(), except it returns GMT
+#	ALSO: DO NOT confuse timegm() with gmtime(), it's inverse.
+#
+sub getDaysRemaining {
+	my ($y, $m, $d)  = @_;
+
+	my $SECONDS_PER_DAY = 60*60*24;
+	# Get current time in GMT, returning time in seconds since epoch
+	my $now          = timegm(gmtime);
+	# http://www.perlhowto.com/converting_from_date_to_epoch_time
+	# timegm - returns numbers of *SECONDS* since the epoch to our date, as GMT.
+	my $myexpirydate = timegm(0,0,0,$d,$m,$y);
+
+	# int() rounds down (28.999 = 28) - http://perldoc.perl.org/functions/int.html
+	return int(($myexpirydate - $now) / $SECONDS_PER_DAY);
+}
+
+##############################
+# LIFTED from my own library
+# The '-t' option only works with 'sendmail' and 'mailx'
+##############################
+sub sendmail {
+    my($subject, $message, $from, $to)  = @_;
+
+    # Open a PIPE to the mail program.
+    unless (open(MAIL, "|$MailProg $MailParms \"$subject\" $to ")) {
+        croak("My sendmail subroutine CAN'T pipe to $MailProg\nCheck Permissions.\n");
+    }
+    if ($DEBUG) { print "Sending Mail To: $to\n"; }
+    print MAIL "From: $from\n";
+    print MAIL $message;
+    close (MAIL);
+}
+
+# Copyright (c) 2016, Jesse Monroy
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+# 
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+__END__
